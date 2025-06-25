@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Time, Weather & Moon</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .moon-phase {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .moon-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .city-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .city-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .city-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .city-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .flag {
+            font-size: 1.5rem;
+        }
+
+        .time {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .date {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-bottom: 15px;
+        }
+
+        .weather {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .weather-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .weather-icon {
+            font-size: 2rem;
+        }
+
+        .weather-temp {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .weather-desc {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .loading {
+            text-align: center;
+            opacity: 0.7;
+            font-style: italic;
+        }
+
+        .error {
+            color: #ffcccb;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .time {
+                font-size: 1.5rem;
+            }
+            
+            .city-name {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 World Time & Weather</h1>
+        </div>
+
+        <div class="moon-phase" id="moonPhase">
+            <span class="moon-icon" id="moonIcon">🌙</span>
+            <div id="moonPhaseName">Loading moon phase...</div>
+            <div id="moonIllumination"></div>
+        </div>
+
+        <div id="cities"></div>
+    </div>
+
+    <script>
+        const cities = [
+            { name: 'New York', country: 'USA', timezone: 'America/New_York', flag: '🇺🇸', lat: 40.7128, lon: -74.0060 },
+            { name: 'London', country: 'UK', timezone: 'Europe/London', flag: '🇬🇧', lat: 51.5074, lon: -0.1278 },
+            { name: 'Tokyo', country: 'Japan', timezone: 'Asia/Tokyo', flag: '🇯🇵', lat: 35.6762, lon: 139.6503 },
+            { name: 'Sydney', country: 'Australia', timezone: 'Australia/Sydney', flag: '🇦🇺', lat: -33.8688, lon: 151.2093 },
+            { name: 'Dubai', country: 'UAE', timezone: 'Asia/Dubai', flag: '🇦🇪', lat: 25.2048, lon: 55.2708 },
+            { name: 'Paris', country: 'France', timezone: 'Europe/Paris', flag: '🇫🇷', lat: 48.8566, lon: 2.3522 }
+        ];
+
+        const weatherIcons = {
+            'clear sky': '☀️',
+            'few clouds': '🌤️',
+            'scattered clouds': '⛅',
+            'broken clouds': '☁️',
+            'shower rain': '🌦️',
+            'rain': '🌧️',
+            'thunderstorm': '⛈️',
+            'snow': '❄️',
+            'mist': '🌫️',
+            'overcast clouds': '☁️',
+            'light rain': '🌦️',
+            'moderate rain': '🌧️',
+            'heavy rain': '🌧️',
+            'drizzle': '🌦️'
+        };
+
+        function getMoonPhase(date) {
+            const knownNewMoon = new Date('2024-01-11T11:57:00Z');
+            const lunarCycle = 29.53058867; // days
+            
+            const daysSinceKnownNewMoon = (date - knownNewMoon) / (1000 * 60 * 60 * 24);
+            const currentPhase = ((daysSinceKnownNewMoon % lunarCycle) + lunarCycle) % lunarCycle;
+            
+            const phasePercent = currentPhase / lunarCycle;
+            const illumination = Math.round(50 * (1 - Math.cos(2 * Math.PI * phasePercent)));
+            
+            let phaseName, phaseIcon;
+            
+            if (phasePercent < 0.0625 || phasePercent >= 0.9375) {
+                phaseName = 'New Moon';
+                phaseIcon = '🌑';
+            } else if (phasePercent < 0.1875) {
+                phaseName = 'Waxing Crescent';
+                phaseIcon = '🌒';
+            } else if (phasePercent < 0.3125) {
+                phaseName = 'First Quarter';
+                phaseIcon = '🌓';
+            } else if (phasePercent < 0.4375) {
+                phaseName = 'Waxing Gibbous';
+                phaseIcon = '🌔';
+            } else if (phasePercent < 0.5625) {
+                phaseName = 'Full Moon';
+                phaseIcon = '🌕';
+            } else if (phasePercent < 0.6875) {
+                phaseName = 'Waning Gibbous';
+                phaseIcon = '🌖';
+            } else if (phasePercent < 0.8125) {
+                phaseName = 'Last Quarter';
+                phaseIcon = '🌗';
+            } else {
+                phaseName = 'Waning Crescent';
+                phaseIcon = '🌘';
+            }
+            
+            return { phaseName, phaseIcon, illumination };
+        }
+
+        function updateMoonPhase() {
+            const now = new Date();
+            const moonData = getMoonPhase(now);
+            
+            document.getElementById('moonIcon').textContent = moonData.phaseIcon;
+            document.getElementById('moonPhaseName').textContent = moonData.phaseName;
+            document.getElementById('moonIllumination').textContent = `${moonData.illumination}% illuminated`;
+        }
+
+        function formatTime(timezone) {
+            return new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            }).format(new Date());
+        }
+
+        function formatDate(timezone) {
+            return new Intl.DateTimeFormat('en-US', {
+                timeZone: timezone,
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }).format(new Date());
+        }
+
+        async function getWeather(lat, lon) {
+            try {
+                // Using a free weather API (OpenWeatherMap requires API key, so we'll simulate weather data)
+                // In a real application, you would use: `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=YOUR_API_KEY&units=metric`
+                
+                // Simulated weather data for demonstration
+                const weatherConditions = ['clear sky', 'few clouds', 'scattered clouds', 'light rain', 'overcast clouds'];
+                const randomCondition = weatherConditions[Math.floor(Math.random() * weatherConditions.length)];
+                const randomTemp = Math.floor(Math.random() * 30) + 5; // 5-35°C
+                
+                return {
+                    temperature: randomTemp,
+                    description: randomCondition,
+                    icon: weatherIcons[randomCondition] || '🌤️'
+                };
+            } catch (error) {
+                return {
+                    temperature: '--',
+                    description: 'Unable to load weather',
+                    icon: '🌤️'
+                };
+            }
+        }
+
+        async function createCityCard(city) {
+            const card = document.createElement('div');
+            card.className = 'city-card';
+            
+            const weather = await getWeather(city.lat, city.lon);
+            
+            card.innerHTML = `
+                <div class="city-header">
+                    <div class="city-name">${city.name}</div>
+                    <div class="flag">${city.flag}</div>
+                </div>
+                <div class="time" id="time-${city.name}">${formatTime(city.timezone)}</div>
+                <div class="date" id="date-${city.name}">${formatDate(city.timezone)}</div>
+                <div class="weather">
+                    <div class="weather-left">
+                        <div class="weather-icon">${weather.icon}</div>
+                        <div>
+                            <div class="weather-temp">${weather.temperature}°C</div>
+                            <div class="weather-desc">${weather.description}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        async function initializeCities() {
+            const citiesContainer = document.getElementById('cities');
+            
+            for (const city of cities) {
+                const card = await createCityCard(city);
+                citiesContainer.appendChild(card);
+            }
+        }
+
+        function updateTimes() {
+            cities.forEach(city => {
+                const timeEl = document.getElementById(`time-${city.name}`);
+                const dateEl = document.getElementById(`date-${city.name}`);
+                if (timeEl) timeEl.textContent = formatTime(city.timezone);
+                if (dateEl) dateEl.textContent = formatDate(city.timezone);
+            });
+        }
+
+        // Initialize the app
+        updateMoonPhase();
+        initializeCities();
+
+        // Update times every second
+        setInterval(updateTimes, 1000);
+        
+        // Update moon phase every hour
+        setInterval(updateMoonPhase, 3600000);
+    </script>
+</body>
+</html>
