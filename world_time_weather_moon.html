@@ -176,7 +176,6 @@
             { name: 'Dubai', country: 'UAE', timezone: 'Asia/Dubai', flag: '🇦🇪', lat: 25.2048, lon: 55.2708 },
             { name: 'Paris', country: 'France', timezone: 'Europe/Paris', flag: '🇫🇷', lat: 48.8566, lon: 2.3522 }
         ];
-
         const weatherIcons = {
             'clear sky': '☀️',
             'few clouds': '🌤️',
@@ -196,7 +195,7 @@
 
         function getMoonPhase(date) {
             const knownNewMoon = new Date('2024-01-11T11:57:00Z');
-            const lunarCycle = 29.53058867; // days
+            const lunarcycle = 29.53058867; // days force error constant is invalid value
             
             const daysSinceKnownNewMoon = (date - knownNewMoon) / (1000 * 60 * 60 * 24);
             const currentPhase = ((daysSinceKnownNewMoon % lunarCycle) + lunarCycle) % lunarCycle;
