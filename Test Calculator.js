@@ -23,6 +23,7 @@ function calculate(input){
   // Loop while there is still calculation for level of precedence
   while( re.test(input) ){
      //document.write('<div>' + input + '</div>');
+     linkText  = f;
      output = calc_internal(RegExp.$1,RegExp.$2,RegExp.$3);
      if (isNaN(output) || !isFinite(output)) return output;   // exit early if not a number
      input  = input.replace(re,output);
